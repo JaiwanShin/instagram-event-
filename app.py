@@ -110,7 +110,7 @@ def generate_sample_posts(usernames: list) -> pd.DataFrame:
 @st.cache_data
 def load_ranking_data() -> tuple[pd.DataFrame, str]:
     """
-    랭킹 데이터 로드 (Cache Reset v8 - 컬럼순서 수정)
+    랭킹 데이터 로드 (Cache Reset v9 - low_frequency 플래그 추가)
     """
     if os.path.exists(RANKING_PATH):
         try:
@@ -232,6 +232,21 @@ def calculate_metrics(ranking_df: pd.DataFrame, posts_df: pd.DataFrame) -> pd.Da
             run_count = user_posts["is_running_related"].sum()
             run_rate = run_count / len(user_posts)
             ranking_df.at[idx, "running_hashtag_rate"] = round(run_rate, 2)
+        
+        # 게시물 빈도 체크 (5개 게시물이 365일 이상에 걸쳐있으면 플래그)
+        if "date" in recent_posts.columns and len(recent_posts) >= 2:
+            dates = recent_posts["date"].dropna()
+            if len(dates) >= 2:
+                newest = dates.iloc[0]
+                oldest = dates.iloc[-1]
+                if pd.notna(newest) and pd.notna(oldest):
+                    date_span = (newest - oldest).days
+                    if date_span > 365:
+                        # 리스크 플래그에 추가
+                        current_flags = str(ranking_df.at[idx, "risk_flags"]) if pd.notna(ranking_df.at[idx, "risk_flags"]) else ""
+                        if "low_frequency" not in current_flags:
+                            new_flags = f"{current_flags}|low_frequency" if current_flags else "low_frequency"
+                            ranking_df.at[idx, "risk_flags"] = new_flags
             
     return ranking_df
 
