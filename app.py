@@ -295,6 +295,10 @@ def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     if filters.get("exclude_no_posts", True) and "posts_90d" in filtered.columns:
         filtered = filtered[filtered["posts_90d"] > 0]
     
+    # low_frequency 제외
+    if filters.get("exclude_low_frequency", True) and "risk_flags" in filtered.columns:
+        filtered = filtered[~filtered["risk_flags"].str.contains("low_frequency", na=False)]
+    
     # Top N 적용
     top_n = filters.get("top_n", 40)
     if len(filtered) > top_n:
@@ -348,6 +352,7 @@ def main():
         st.subheader("하드 필터")
         exclude_private = st.toggle("비공개 계정 제외", value=True)
         exclude_no_posts = st.toggle("posts_90d=0 제외", value=True)
+        exclude_low_frequency = st.toggle("게시빈도 낮은 유저 제외 (low_frequency)", value=True)
         show_low_post_warning = st.toggle("post_count≤3 경고 표시", value=True)
         
         st.divider()
@@ -362,6 +367,7 @@ def main():
     filters = {
         "exclude_private": exclude_private,
         "exclude_no_posts": exclude_no_posts,
+        "exclude_low_frequency": exclude_low_frequency,
         "top_n": top_n
     }
     
