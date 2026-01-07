@@ -295,9 +295,7 @@ def apply_filters(df: pd.DataFrame, filters: dict) -> pd.DataFrame:
     if filters.get("exclude_no_posts", True) and "posts_90d" in filtered.columns:
         filtered = filtered[filtered["posts_90d"] > 0]
     
-    # low_frequency 제외
-    if filters.get("exclude_low_frequency", True) and "risk_flags" in filtered.columns:
-        filtered = filtered[~filtered["risk_flags"].str.contains("low_frequency", na=False)]
+
     
     # Top N 적용
     top_n = filters.get("top_n", 40)
@@ -352,7 +350,7 @@ def main():
         st.subheader("하드 필터")
         exclude_private = st.toggle("비공개 계정 제외", value=True)
         exclude_no_posts = st.toggle("posts_90d=0 제외", value=True)
-        exclude_low_frequency = st.toggle("게시빈도 낮은 유저 제외 (low_frequency)", value=True)
+        exclude_low_frequency = st.toggle("자동 선정 제외 (low_frequency risk)", value=True)
         show_low_post_warning = st.toggle("post_count≤3 경고 표시", value=True)
         
         st.divider()
@@ -376,8 +374,15 @@ def main():
     # ========== 선정 상태 관리 ==========
     # 자동 선정 로직
     def auto_select():
-        # 현재 필터링된 데이터 기준으로 상위 20명/10명 선정
-        current_candidates = filtered_df["username"].tolist()
+        # 후보군 추출 (필터링된 전체 리스트에서 시작)
+        candidates_df = filtered_df.copy()
+        
+        # low_frequency 제외 (자동 선정 시에만 제외)
+        if exclude_low_frequency and "risk_flags" in candidates_df.columns:
+            candidates_df = candidates_df[~candidates_df["risk_flags"].str.contains("low_frequency", na=False)]
+        
+        # 상위 20명/10명 선정
+        current_candidates = candidates_df["username"].tolist()
         st.session_state.selected_users = set(current_candidates[:20])
         st.session_state.backup_users = set(current_candidates[20:30])
         st.toast("✅ 상위 20명(선정) / 10명(예비) 자동 선택 완료!")
