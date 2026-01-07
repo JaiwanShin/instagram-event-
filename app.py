@@ -429,9 +429,16 @@ def main():
         column_config = {
             "선정": st.column_config.CheckboxColumn("선정 (20)", default=False),
             "예비": st.column_config.CheckboxColumn("예비 (10)", default=False),
-            "username": st.column_config.TextColumn("Username", width="medium"),
+            "username": st.column_config.TextColumn("유저네임", width="medium"),
             "is_private": st.column_config.CheckboxColumn("비공개", disabled=True),
             "followers": st.column_config.NumberColumn("팔로워", format="%d"),
+            "avg_likes_5": st.column_config.NumberColumn("평균좋아요", format="%.1f"),
+            "avg_comments_5": st.column_config.NumberColumn("평균댓글", format="%.1f"),
+            "last_post_days": st.column_config.NumberColumn("최근활동(일)", format="%d"),
+            "posts_90d": st.column_config.NumberColumn("90일포스트", format="%d"),
+            "comment_like_ratio": st.column_config.NumberColumn("댓글/좋아요비율", format="%.3f"),
+            "low_comment_post_rate": st.column_config.NumberColumn("저댓글비율", format="%.2f"),
+            "running_hashtag_rate": st.column_config.NumberColumn("러닝태그율", format="%.2f"),
             "Final": st.column_config.ProgressColumn("Final", min_value=0, max_value=100, format="%.1f"),
             "Relationship": st.column_config.ProgressColumn("Relationship", min_value=0, max_value=100, format="%.1f"),
             "Reliability": st.column_config.ProgressColumn("Reliability", min_value=0, max_value=100, format="%.1f"),
@@ -700,9 +707,17 @@ def main():
           > `Final = Relationship + Reliability + RunnerFit`
         
         #### 2. 메트릭 계산 기준 (Metrics)
-        - **Avg Likes/Comments**: 최근 12개 게시물의 평균값
-        - **Comment/Like Ratio**: 평균 댓글 / 평균 좋아요 (소통의 질)
-        - **Running Hashtag Rate**: 전체 게시물 중 러닝 키워드가 포함된 비율
+        
+        | 메트릭 | 한글명 | 계산 방법 | 해석 |
+        |--------|--------|-----------|------|
+        | **avg_likes_5** | 평균좋아요 | 최근 5개 게시물의 좋아요 평균 | 콘텐츠 인기도 |
+        | **avg_comments_5** | 평균댓글 | 최근 5개 게시물의 댓글 평균 | 팔로워 참여도 |
+        | **comment_like_ratio** | 댓글/좋아요비율 | 평균댓글 ÷ 평균좋아요 | 높을수록 소통 활발 (0.05 이상 권장) |
+        | **low_comment_post_rate** | 저댓글비율 | 댓글 3개 이하 게시물 / 전체 5개 | 낮을수록 좋음 (0이면 모든 글에 댓글 4개+) |
+        | **running_hashtag_rate** | 러닝태그율 | 러닝 관련 게시물 / 전체 게시물 | 1.0이면 100% 러닝 계정 |
+        
+        #### 3. 리스크 플래그 (Risk Flags)
+        - **low_frequency**: 최근 5개 게시물의 날짜 범위가 365일 이상 (1년에 5개 이하 포스팅)
         """)
 
 
