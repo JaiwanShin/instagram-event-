@@ -110,7 +110,7 @@ def generate_sample_posts(usernames: list) -> pd.DataFrame:
 @st.cache_data
 def load_ranking_data() -> tuple[pd.DataFrame, str]:
     """
-    랭킹 데이터 로드 (Cache Reset v7)
+    랭킹 데이터 로드 (Cache Reset v8 - 컬럼순서 수정)
     """
     if os.path.exists(RANKING_PATH):
         try:
@@ -413,9 +413,18 @@ def main():
             "risk_flags": st.column_config.TextColumn("리스크", width="medium"),
         }
         
+        # 컬럼 순서 지정 (팔로워 다음에 평균 좋아요/댓글)
+        column_order = [
+            "선정", "예비", "username", "is_private", "followers", 
+            "avg_likes_5", "avg_comments_5",
+            "last_post_days", "posts_90d", "comment_like_ratio", "low_comment_post_rate",
+            "running_hashtag_rate", "Relationship", "Reliability", "RunnerFit", "Final", "risk_flags"
+        ]
+        
         edited_df = st.data_editor(
             display_df,
             column_config=column_config,
+            column_order=column_order,
             use_container_width=True,
             hide_index=True,
             num_rows="fixed",
