@@ -208,14 +208,22 @@ def apply_scores(
     # Merge participant info with features
     df = participants_df.merge(features_df, on="username", how="left")
     
-    # Fill missing feature values (engagement_rate 추가)
+    # Fill missing feature values
     feature_cols = ["avg_comments_12", "avg_likes_12", "comment_like_ratio", 
-                    "low_comment_post_rate", "community_signal", "running_hashtag_rate",
-                    "engagement_rate"]
+                    "low_comment_post_rate", "community_signal", "running_hashtag_rate"]
     for col in feature_cols:
         if col not in df.columns:
             df[col] = 0
         df[col] = df[col].fillna(0)
+
+    # Calculate Engagement Rate (avg_comments_12 / followers * 100)
+    df["followers"] = pd.to_numeric(df["followers"], errors="coerce").fillna(0)
+    df["engagement_rate"] = 0.0
+    
+    # Vectorized calculation
+    mask = df["followers"] > 0
+    df.loc[mask, "engagement_rate"] = (df.loc[mask, "avg_comments_12"] / df.loc[mask, "followers"]) * 100
+    df["engagement_rate"] = df["engagement_rate"].round(2)
     
     # Compute scores
     df["relationship_score"] = df.apply(compute_relationship_score, axis=1)
@@ -298,7 +306,7 @@ def create_rankings(
         "rank", "username", "relationship_score", "reliability_score", 
         "runnerfit_score", "final_score", "risk_flag",
         "avg_comments_12", "avg_likes_12", "low_comment_post_rate", 
-        "running_hashtag_rate", "followers", "posts_90d"
+        "running_hashtag_rate", "followers", "posts_90d", "engagement_rate"
     ]
     available_cols = [c for c in output_cols if c in main_pool.columns]
     
