@@ -12,19 +12,21 @@ from typing import Tuple
 
 def score_avg_comments(avg_comments: float) -> int:
     """
-    A) avg_comments_12 -> Relationship base score
-    <0.5: 5, 0.5~1: 10, 1~2: 20, 2~4: 35, >=4: 50
+    A) avg_comments_12 -> Relationship 댓글 기반 점수 (30점 만점)
+    
+    평균 댓글 수에 따른 기본 점수:
+    <0.5: 3점, 0.5~1: 6점, 1~2: 12점, 2~4: 21점, >=4: 30점
     """
     if avg_comments < 0.5:
-        return 5
+        return 3
     elif avg_comments < 1:
-        return 10
+        return 6
     elif avg_comments < 2:
-        return 20
+        return 12
     elif avg_comments < 4:
-        return 35
+        return 21
     else:
-        return 50
+        return 30
 
 
 def score_low_comment_penalty(low_comment_rate: float) -> int:
@@ -103,19 +105,62 @@ def score_running_hashtag(rate: float) -> int:
         return 20
 
 
+def score_engagement_rate(engagement_rate: float) -> int:
+    """
+    G) engagement_rate -> Engagement 효율성 점수 (20점 만점)
+    
+    [의미] 팔로워 대비 댓글 참여율
+    - 팔로워가 적어도 참여율이 높으면 진정한 커뮤니티가 있다는 신호
+    - 대규모 팔로워지만 참여가 적으면 낮은 점수
+    
+    [수식] engagement_rate = (평균 댓글 수 / 팔로워 수) × 100
+    
+    [구간 점수]
+    >= 1.0%: 20점 (매우 높은 참여율 - 소규모 밀착 커뮤니티)
+    0.5~1.0%: 15점 (높은 참여율)
+    0.2~0.5%: 10점 (보통 참여율)
+    0.1~0.2%: 5점 (낮은 참여율)
+    < 0.1%: 0점 (매우 낮은 참여율 - 소통 부족)
+    
+    [예시]
+    - 팔로워 1,000명, 평균 댓글 10개 → 1.0% → 20점
+    - 팔로워 10,000명, 평균 댓글 10개 → 0.1% → 5점
+    """
+    if engagement_rate >= 1.0:
+        return 20
+    elif engagement_rate >= 0.5:
+        return 15
+    elif engagement_rate >= 0.2:
+        return 10
+    elif engagement_rate >= 0.1:
+        return 5
+    else:
+        return 0
+
+
 # =============================================================================
 # Main Scoring Functions
 # =============================================================================
 
 def compute_relationship_score(row: pd.Series) -> int:
     """
-    Relationship Score (0-50)
-    = score_avg_comments + score_low_comment_penalty
-    Clamped to [0, 50]
+    Relationship Score (관계성 점수, 0-50점)
+    
+    [의미] 팔로워와 얼마나 진정성 있게 소통하는가?
+    - 댓글 많음 = 활발한 소통
+    - 참여율 높음 = 효율적 소통 (팔로워 대비)
+    
+    [수식]
+    = 댓글 기반 점수 (30점) + Engagement Rate 점수 (20점) + 페널티
+    
+    [예시]
+    - 평균 댓글 5개 (30점) + 참여율 1% (20점) = 50점 (만점)
+    - 평균 댓글 5개 (30점) + 참여율 0.05% (0점) = 30점
     """
-    base = score_avg_comments(row["avg_comments_12"])
+    comment_score = score_avg_comments(row["avg_comments_12"])
+    engagement_score = score_engagement_rate(row.get("engagement_rate", 0))
     penalty = score_low_comment_penalty(row["low_comment_post_rate"])
-    return max(0, min(50, base + penalty))
+    return max(0, min(50, comment_score + engagement_score + penalty))
 
 
 def compute_reliability_score(row: pd.Series) -> int:
@@ -163,9 +208,10 @@ def apply_scores(
     # Merge participant info with features
     df = participants_df.merge(features_df, on="username", how="left")
     
-    # Fill missing feature values
+    # Fill missing feature values (engagement_rate 추가)
     feature_cols = ["avg_comments_12", "avg_likes_12", "comment_like_ratio", 
-                    "low_comment_post_rate", "community_signal", "running_hashtag_rate"]
+                    "low_comment_post_rate", "community_signal", "running_hashtag_rate",
+                    "engagement_rate"]
     for col in feature_cols:
         if col not in df.columns:
             df[col] = 0
